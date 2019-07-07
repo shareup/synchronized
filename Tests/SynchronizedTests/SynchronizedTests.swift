@@ -2,6 +2,18 @@ import XCTest
 @testable import Synchronized
 
 final class SynchronizedTests: XCTestCase {
+    func testReturnsValueSynchronized() {
+        let lock = NSObject()
+        let input: Int = 0
+        let output = synchronized(lock) { input + 1 }
+        XCTAssertEqual(1, output)
+    }
+
+    func testThrowsErrorSynchronized() {
+        let lock = NSObject()
+        XCTAssertThrowsError(try synchronized(lock, { throw NSError() }))
+    }
+
     func testCounterWithSynchronized() {
         let iterations = 100_000
         let counter = Counter()

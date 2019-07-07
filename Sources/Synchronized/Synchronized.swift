@@ -1,18 +1,18 @@
 import Foundation
 
-public func synchronized(_ object: AnyObject, _ block: () -> Void) {
+public func synchronized<T>(_ object: AnyObject, _ block: () throws -> T) rethrows -> T {
     let queue = getQueue(for: object)
     if queue.isCurrent {
-        block()
+        return try block()
     } else {
-        queue.backing.sync(execute: block)
+        return try queue.backing.sync(execute: block)
     }
 }
 
 public protocol Synchronized: class { }
 
 extension Synchronized {
-    public func sync(_ block: () -> Void) {
-        synchronized(self, block)
+    public func sync<T>(_ block: () throws -> T) rethrows -> T {
+        return try synchronized(self, block)
     }
 }
