@@ -132,6 +132,8 @@ final class SynchronizedTests: XCTestCase {
     }
 
     static var allTests = [
+        ("testReturnsValueSynchronized", testReturnsValueSynchronized),
+        ("testThrowsErrorSynchronized", testThrowsErrorSynchronized),
         ("testCounterWithSynchronized", testCounterWithSynchronized),
         ("testCounterWithSynchronizedAndSync", testCounterWithSynchronizedAndSync),
         ("testCounterWithSynchronizedWithDifferentQoS", testCounterWithSynchronizedWithDifferentQoS),
