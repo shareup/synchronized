@@ -1,19 +1,24 @@
 import Foundation
 
 final class Queue {
-    let backing: DispatchQueue
-
-    private let _queueKey: DispatchSpecificKey<Int>
-    private lazy var _queueContext: Int = unsafeBitCast(self, to: Int.self)
+    private var _backing = pthread_mutex_t()
 
     init() {
-        _queueKey = DispatchSpecificKey<Int>()
-        backing = DispatchQueue(label: UUID().uuidString)
-        backing.setSpecific(key: _queueKey, value: _queueContext)
+        var attributes = pthread_mutexattr_t()
+        guard pthread_mutexattr_init(&attributes) == 0 else { preconditionFailure() }
+        pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE)
+        guard pthread_mutex_init(&_backing, &attributes) == 0 else { preconditionFailure() }
+        pthread_mutexattr_destroy(&attributes)
     }
 
-    var isCurrent: Bool {
-        return DispatchQueue.getSpecific(key: _queueKey) == _queueContext
+    deinit {
+        pthread_mutex_destroy(&_backing)
+    }
+
+    func sync<T>(_ block: () throws -> T) rethrows -> T {
+        pthread_mutex_lock(&_backing)
+        defer { pthread_mutex_unlock(&_backing) }
+        return try block()
     }
 }
 

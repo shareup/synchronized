@@ -1,12 +1,7 @@
 import Foundation
 
 public func synchronized<T>(_ object: AnyObject, _ block: () throws -> T) rethrows -> T {
-    let queue = getQueue(for: object)
-    if queue.isCurrent {
-        return try block()
-    } else {
-        return try queue.backing.sync(execute: block)
-    }
+    return try getQueue(for: object).sync(block)
 }
 
 public protocol Synchronized: class { }
