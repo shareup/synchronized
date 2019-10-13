@@ -9,9 +9,13 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(1, output)
     }
 
+	enum TestError: Error {
+		case locked
+	}
+
     func testThrowsErrorSynchronized() {
         let lock = NSObject()
-        XCTAssertThrowsError(try synchronized(lock, { throw NSError() }))
+        XCTAssertThrowsError(try synchronized(lock, { throw TestError.locked }))
     }
 
     func testCounterWithSynchronized() {
