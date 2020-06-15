@@ -54,14 +54,19 @@ func getQueue(for object: AnyObject) -> Queue {
 
 private func removeQueuesForDeallocatedObjects() {
     cleanupQueue.async {
-        lock.tryLocked {
-            var keysToRemove = Array<WeakWrapper>()
-            for (key, _) in objectToQueueMap {
-                if key.doesNotExist {
-                    keysToRemove.append(key)
-                }
+        var optionalCopy: Dictionary<WeakWrapper, Queue>? = nil
+        lock.tryLocked { optionalCopy = objectToQueueMap }
+
+        guard var copy = optionalCopy else { return }
+        
+        var keysToRemove = Array<WeakWrapper>()
+        for (key, _) in copy {
+            if key.doesNotExist {
+                keysToRemove.append(key)
             }
-            keysToRemove.forEach { objectToQueueMap.removeValue(forKey: $0) }
         }
+        keysToRemove.forEach { copy.removeValue(forKey: $0) }
+
+        lock.tryLocked { objectToQueueMap = copy }
     }
 }
