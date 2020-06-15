@@ -2,10 +2,17 @@ import XCTest
 import Synchronized
 
 final class SynchronizedTests: XCTestCase {
-    func testReturnsValueSynchronized() {
-        let lock = NSObject()
+    func testReturnsValueFromLock() {
+        let lock = Lock()
         let input: Int = 0
-        let output = synchronized(lock) { input + 1 }
+        let output = lock.locked { input + 1 }
+        XCTAssertEqual(1, output)
+    }
+
+    func testReturnsValueFromRecursiveLock() {
+        let lock = RecursiveLock()
+        let input: Int = 0
+        let output = lock.locked { input + 1 }
         XCTAssertEqual(1, output)
     }
 
@@ -13,20 +20,26 @@ final class SynchronizedTests: XCTestCase {
 		case locked
 	}
 
-    func testThrowsErrorSynchronized() {
-        let lock = NSObject()
-        XCTAssertThrowsError(try synchronized(lock, { throw TestError.locked }))
+    func testThrowsErrorFromLock() {
+        let lock = Lock()
+        XCTAssertThrowsError(try lock.locked { throw TestError.locked })
     }
 
-    func testCounterWithSynchronized() {
+    func testThrowsErrorFromRecursiveLock() {
+        let lock = RecursiveLock()
+        XCTAssertThrowsError(try lock.locked { throw TestError.locked })
+    }
+
+    func testCounterWithLock() {
         let iterations = 100_000
         let counter = Counter()
+        let lock = Lock()
         let group = DispatchGroup()
 
         (0..<iterations).forEach { _ in
             group.enter()
             DispatchQueue.global().async {
-                synchronized(counter) { counter.increment() }
+                lock.locked { counter.increment() }
                 group.leave()
             }
         }
@@ -36,24 +49,17 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(iterations, counter.currentValue)
     }
 
-    func testCounterWithSynchronizedAndSync() {
+    func testCounterWithRecursiveLock() {
         let iterations = 100_000
         let counter = Counter()
+        let lock = RecursiveLock()
         let group = DispatchGroup()
 
-        (0..<iterations).forEach { iteration in
+        (0..<iterations).forEach { _ in
             group.enter()
-
-            if iteration % 2 == 0 {
-                DispatchQueue.global().async {
-                    synchronized(counter) { counter.increment() }
-                    group.leave()
-                }
-            } else {
-                DispatchQueue.global().async {
-                    counter.synchronizedIncrement()
-                    group.leave()
-                }
+            DispatchQueue.global().async {
+                lock.locked { counter.increment() }
+                group.leave()
             }
         }
 
@@ -62,9 +68,10 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(iterations, counter.currentValue)
     }
 
-    func testCounterWithSynchronizedWithDifferentQoS() {
+    func testCounterWithLockWithDifferentQoS() {
         let iterations = 100_000
         let counter = Counter()
+        let lock = Lock()
         let group = DispatchGroup()
 
         (0..<iterations).forEach { _ in
@@ -72,7 +79,7 @@ final class SynchronizedTests: XCTestCase {
 
             let qos: DispatchQoS.QoSClass = Bool.random() ? .userInteractive : .background
             DispatchQueue.global(qos: qos).async {
-                synchronized(counter) { counter.increment() }
+                lock.locked { counter.increment() }
                 group.leave()
             }
         }
@@ -82,12 +89,34 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(iterations, counter.currentValue)
     }
 
-    func testMultipleCountersWithSynchronized() {
+    func testCounterWithRecursiveLockWithDifferentQoS() {
+        let iterations = 100_000
+        let counter = Counter()
+        let lock = RecursiveLock()
+        let group = DispatchGroup()
+
+        (0..<iterations).forEach { _ in
+            group.enter()
+
+            let qos: DispatchQoS.QoSClass = Bool.random() ? .userInteractive : .background
+            DispatchQueue.global(qos: qos).async {
+                lock.locked { counter.increment() }
+                group.leave()
+            }
+        }
+
+        group.wait()
+
+        XCTAssertEqual(iterations, counter.currentValue)
+    }
+
+    func testMultipleCountersWithLock() {
         let iterations = 100_000
         let first = Counter()
         let second = Counter()
         let third = Counter()
         let counters = [first, second, third]
+        let lock = Lock()
 
         let group = DispatchGroup()
 
@@ -95,7 +124,7 @@ final class SynchronizedTests: XCTestCase {
             counters.forEach { counter in
                 group.enter()
                 DispatchQueue.global().async {
-                    synchronized(counter) { counter.increment() }
+                    lock.locked { counter.increment() }
                     group.leave()
                 }
             }
@@ -108,12 +137,40 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(iterations, third.currentValue)
     }
 
-    func testMultipleCountersWithSynchronizedWithDifferentQoS() {
+    func testMultipleCountersWithRecursiveLock() {
         let iterations = 100_000
         let first = Counter()
         let second = Counter()
         let third = Counter()
         let counters = [first, second, third]
+        let lock = RecursiveLock()
+
+        let group = DispatchGroup()
+
+        (0..<iterations).forEach { iteration in
+            counters.forEach { counter in
+                group.enter()
+                DispatchQueue.global().async {
+                    lock.locked { counter.increment() }
+                    group.leave()
+                }
+            }
+        }
+
+        group.wait()
+
+        XCTAssertEqual(iterations, first.currentValue)
+        XCTAssertEqual(iterations, second.currentValue)
+        XCTAssertEqual(iterations, third.currentValue)
+    }
+
+    func testMultipleCountersWithLockWithDifferentQoS() {
+        let iterations = 100_000
+        let first = Counter()
+        let second = Counter()
+        let third = Counter()
+        let counters = [first, second, third]
+        let lock = Lock()
 
         let group = DispatchGroup()
 
@@ -122,7 +179,7 @@ final class SynchronizedTests: XCTestCase {
                 group.enter()
                 let qos: DispatchQoS.QoSClass = Bool.random() ? .userInteractive : .background
                 DispatchQueue.global(qos: qos).async {
-                    synchronized(counter) { counter.increment() }
+                    lock.locked { counter.increment() }
                     group.leave()
                 }
             }
@@ -135,18 +192,46 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(iterations, third.currentValue)
     }
 
-    func testRecursiveCallsToSynchronized() {
-        let object = NSObject()
+    func testMultipleCountersWithRecursiveLockWithDifferentQoS() {
+        let iterations = 100_000
+        let first = Counter()
+        let second = Counter()
+        let third = Counter()
+        let counters = [first, second, third]
+        let lock = RecursiveLock()
+
+        let group = DispatchGroup()
+
+        (0..<iterations).forEach { iteration in
+            counters.forEach { counter in
+                group.enter()
+                let qos: DispatchQoS.QoSClass = Bool.random() ? .userInteractive : .background
+                DispatchQueue.global(qos: qos).async {
+                    lock.locked { counter.increment() }
+                    group.leave()
+                }
+            }
+        }
+
+        group.wait()
+
+        XCTAssertEqual(iterations, first.currentValue)
+        XCTAssertEqual(iterations, second.currentValue)
+        XCTAssertEqual(iterations, third.currentValue)
+    }
+
+    func testRecursiveCalls() {
         var count = 0
 
+        let lock = RecursiveLock()
         let queue = DispatchQueue(label: "RecursiveCounterQueue")
         let group = DispatchGroup()
 
         group.enter()
-        synchronized(object) {
+        lock.locked {
             count += 1
             queue.sync {
-                synchronized(object) {
+                lock.locked {
                     group.enter()
                     count += 1
                     group.leave()
@@ -159,13 +244,14 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(2, count)
     }
 
-    func testPerformanceOfMultipleCountersWithDifferentQoS() {
+    func testPerformanceOfLock() {
         measure {
             let iterations = 100_000
             let first = Counter()
             let second = Counter()
             let third = Counter()
             let counters = [first, second, third]
+            let lock = Lock()
 
             let group = DispatchGroup()
 
@@ -174,7 +260,37 @@ final class SynchronizedTests: XCTestCase {
                     group.enter()
                     let qos: DispatchQoS.QoSClass = Bool.random() ? .userInteractive : .background
                     DispatchQueue.global(qos: qos).async {
-                        synchronized(counter) { counter.increment() }
+                        lock.locked { counter.increment() }
+                        group.leave()
+                    }
+                }
+            }
+
+            group.wait()
+
+            XCTAssertEqual(iterations, first.currentValue)
+            XCTAssertEqual(iterations, second.currentValue)
+            XCTAssertEqual(iterations, third.currentValue)
+        }
+    }
+
+    func testPerformanceOfRecursiveLock() {
+        measure {
+            let iterations = 100_000
+            let first = Counter()
+            let second = Counter()
+            let third = Counter()
+            let counters = [first, second, third]
+            let lock = RecursiveLock()
+
+            let group = DispatchGroup()
+
+            (0..<iterations).forEach { iteration in
+                counters.forEach { counter in
+                    group.enter()
+                    let qos: DispatchQoS.QoSClass = Bool.random() ? .userInteractive : .background
+                    DispatchQueue.global(qos: qos).async {
+                        lock.locked { counter.increment() }
                         group.leave()
                     }
                 }
@@ -189,14 +305,20 @@ final class SynchronizedTests: XCTestCase {
     }
 
     static var allTests = [
-        ("testReturnsValueSynchronized", testReturnsValueSynchronized),
-        ("testThrowsErrorSynchronized", testThrowsErrorSynchronized),
-        ("testCounterWithSynchronized", testCounterWithSynchronized),
-        ("testCounterWithSynchronizedAndSync", testCounterWithSynchronizedAndSync),
-        ("testCounterWithSynchronizedWithDifferentQoS", testCounterWithSynchronizedWithDifferentQoS),
-        ("testMultipleCountersWithSynchronized", testMultipleCountersWithSynchronized),
-        ("testMultipleCountersWithSynchronizedWithDifferentQoS", testMultipleCountersWithSynchronizedWithDifferentQoS),
-        ("testRecursiveCallsToSynchronized", testRecursiveCallsToSynchronized),
-        ("testPerformanceOfMultipleCountersWithDifferentQoS", testPerformanceOfMultipleCountersWithDifferentQoS),
+        ("testReturnsValueFromLock", testReturnsValueFromLock),
+        ("testReturnsValueFromRecursiveLock", testReturnsValueFromRecursiveLock),
+        ("testThrowsErrorFromLock", testThrowsErrorFromLock),
+        ("testThrowsErrorFromRecursiveLock", testThrowsErrorFromRecursiveLock),
+        ("testCounterWithLock", testCounterWithLock),
+        ("testCounterWithRecursiveLock", testCounterWithRecursiveLock),
+        ("testCounterWithLockWithDifferentQoS", testCounterWithLockWithDifferentQoS),
+        ("testCounterWithRecursiveLockWithDifferentQoS", testCounterWithRecursiveLockWithDifferentQoS),
+        ("testMultipleCountersWithLock", testMultipleCountersWithLock),
+        ("testMultipleCountersWithRecursiveLock", testMultipleCountersWithRecursiveLock),
+        ("testMultipleCountersWithLockWithDifferentQoS", testMultipleCountersWithLockWithDifferentQoS),
+        ("testMultipleCountersWithRecursiveLockWithDifferentQoS", testMultipleCountersWithRecursiveLockWithDifferentQoS),
+        ("testRecursiveCalls", testRecursiveCalls),
+        ("testPerformanceOfLock", testPerformanceOfLock),
+        ("testPerformanceOfRecursiveLock", testPerformanceOfRecursiveLock),
     ]
 }
