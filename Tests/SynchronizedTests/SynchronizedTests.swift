@@ -110,6 +110,77 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(iterations, counter.currentValue)
     }
 
+    func testSuccessfulTryLockedWithLock() {
+        let counter = Counter()
+        let lock = Lock()
+        lock.tryLocked { counter.increment() }
+        XCTAssertEqual(1, counter.currentValue)
+    }
+
+    func testSuccessfulTryLockedWithRecursiveLock() {
+        let counter = Counter()
+        let lock = RecursiveLock()
+        lock.tryLocked { counter.increment() }
+        XCTAssertEqual(1, counter.currentValue)
+    }
+
+    func testUnsuccessfulRecursiveTryLockedWithLock() {
+        var count = 0
+
+        let lock = Lock()
+        let group = DispatchGroup()
+
+        group.enter()
+        lock.locked {
+            count += 1
+            lock.tryLocked {
+                count += 1
+            }
+            group.leave()
+        }
+        group.wait()
+
+        XCTAssertEqual(1, count)
+    }
+
+    func testUnsuccessfulTryLockedWithLock() {
+        let iterations = 100_000
+        let counter = Counter()
+        let lock = Lock()
+        let group = DispatchGroup()
+
+        (0..<iterations).forEach { _ in
+            group.enter()
+            DispatchQueue.global().async {
+                lock.tryLocked { counter.increment() }
+                group.leave()
+            }
+        }
+
+        group.wait()
+
+        XCTAssertNotEqual(iterations, counter.currentValue)
+    }
+
+    func testUnsuccessfulTryLockedWithRecursiveLock() {
+        let iterations = 100_000
+        let counter = Counter()
+        let lock = RecursiveLock()
+        let group = DispatchGroup()
+
+        (0..<iterations).forEach { _ in
+            group.enter()
+            DispatchQueue.global().async {
+                lock.tryLocked { counter.increment() }
+                group.leave()
+            }
+        }
+
+        group.wait()
+
+        XCTAssertNotEqual(iterations, counter.currentValue)
+    }
+
     func testMultipleCountersWithLock() {
         let iterations = 100_000
         let first = Counter()
@@ -224,18 +295,13 @@ final class SynchronizedTests: XCTestCase {
         var count = 0
 
         let lock = RecursiveLock()
-        let queue = DispatchQueue(label: "RecursiveCounterQueue")
         let group = DispatchGroup()
 
         group.enter()
         lock.locked {
             count += 1
-            queue.sync {
-                lock.locked {
-                    group.enter()
-                    count += 1
-                    group.leave()
-                }
+            lock.locked {
+                count += 1
             }
             group.leave()
         }
@@ -313,6 +379,11 @@ final class SynchronizedTests: XCTestCase {
         ("testCounterWithRecursiveLock", testCounterWithRecursiveLock),
         ("testCounterWithLockWithDifferentQoS", testCounterWithLockWithDifferentQoS),
         ("testCounterWithRecursiveLockWithDifferentQoS", testCounterWithRecursiveLockWithDifferentQoS),
+        ("testSuccessfulTryLockedWithLock", testSuccessfulTryLockedWithLock),
+        ("testSuccessfulTryLockedWithRecursiveLock", testSuccessfulTryLockedWithRecursiveLock),
+        ("testUnsuccessfulRecursiveTryLockedWithLock", testUnsuccessfulRecursiveTryLockedWithLock),
+        ("testUnsuccessfulTryLockedWithLock", testUnsuccessfulTryLockedWithLock),
+        ("testUnsuccessfulTryLockedWithRecursiveLock", testUnsuccessfulTryLockedWithRecursiveLock),
         ("testMultipleCountersWithLock", testMultipleCountersWithLock),
         ("testMultipleCountersWithRecursiveLock", testMultipleCountersWithRecursiveLock),
         ("testMultipleCountersWithLockWithDifferentQoS", testMultipleCountersWithLockWithDifferentQoS),
