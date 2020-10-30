@@ -1,34 +1,25 @@
 # synchronized
 
-Synchronized is a simple (and simplified) re-implmentation of [Objective-C's @synchronized](http://www.opensource.apple.com/source/objc4/objc4-646/runtime/objc-sync.mm) for Swift.
+`Synchronized` provides a simple Swift-y implementation of a lock and a recursive lock. `Lock` wraps `os_unfair_lock`. `RecursiveLock` wraps `pthread_mutex_t`. `Synchronized`'s API is designed for convenience and simplicity. 
 
-Synchronized enables users to protect access to blocks of code by providing an object pointer as a parameter. The object pointer acts as a lock. Given the same object pointer, only one thread is permitted within a synchronized block at a time. For added convenience, classes are able to add conformance to the empty `Synchronized` protocol. Conforming to `Synchronized` grants the class access to the `sync` function, which uses `self` as the "lock" for blocks passed to it. 
+The two lock's APIs are identical and limited to two public methods: `func locked<T>(_ block: () throws -> T) rethrows -> T` and `func tryLocked(_ block: () throws -> Void) rethrows`. `locked()` blocks on contention and then executes the supplied closure, returning or throwing the closure's return value or thrown error. `tryLocked()` attemps to acquire the lock. If the lock can be acquired, the supplied closure is executed and `true` is returned. If the lock cannot be acquired, the closure is not executed and `false` is returned.
+
+## @synchonized replacement 
+
+_Synchronized started life as a simple (and simplified) re-implmentation of [Objective-C's @synchronized](http://www.opensource.apple.com/source/objc4/objc4-646/runtime/objc-sync.mm) for Swift. If you're interested in that version, you should look at [v1.2.1](https://github.com/shareup/synchronized/releases/tag/v1.2.1)._ 
 
 ## Usage
 
 ```swift
-final class Counter: Synchronized {
-  private var _value: Int = 0
+let lock = Lock()
+let lockInput: Int = 0
+let lockOutput = lock.locked { lockInput + 1 }
+XCTAssertEqual(1, lockOutput)
 
-  var currentValue: Int { return _value }
-
-  func increment() {
-    _value += 1
-  }
-
-  func synchronizedIncrement() {
-    self.sync { _value += 1 }
-  }
-}
-
-let counter = Counter()
-
-DispatchQueue.global().async {
-  synchronized(counter) { counter.increment() }
-}
-DispatchQueue.global().async {
-  counter.synchronizedIncrement()
-}
+let recursiveLock = RecursiveLock()
+let recursiveLockInput: Int = 0
+let recursiveLockOutput = recursiveLock.locked { recursiveLockInput + 1 }
+XCTAssertEqual(1, recursiveLockOutput)
 ```
 
 ## Installation
@@ -40,7 +31,7 @@ To use Synchronized with the Swift Package Manager, add a dependency to your Pac
 ```swift
 let package = Package(
   dependencies: [
-    .package(url: "https://github.com/shareup/synchronized.git", .upToNextMajor(from: "2.0.0"))
+    .package(url: "https://github.com/shareup/synchronized.git", .upToNextMajor(from: "2.1.0"))
   ]
 )
 ```
