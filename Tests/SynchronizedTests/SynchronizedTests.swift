@@ -113,14 +113,14 @@ final class SynchronizedTests: XCTestCase {
     func testSuccessfulTryLockedWithLock() {
         let counter = Counter()
         let lock = Lock()
-        lock.tryLocked { counter.increment() }
+        XCTAssertTrue(lock.tryLocked { counter.increment() })
         XCTAssertEqual(1, counter.currentValue)
     }
 
     func testSuccessfulTryLockedWithRecursiveLock() {
         let counter = Counter()
         let lock = RecursiveLock()
-        lock.tryLocked { counter.increment() }
+        XCTAssertTrue(lock.tryLocked { counter.increment() })
         XCTAssertEqual(1, counter.currentValue)
     }
 
@@ -133,9 +133,7 @@ final class SynchronizedTests: XCTestCase {
         group.enter()
         lock.locked {
             count += 1
-            lock.tryLocked {
-                count += 1
-            }
+            XCTAssertFalse(lock.tryLocked { count += 1 })
             group.leave()
         }
         group.wait()
@@ -152,7 +150,7 @@ final class SynchronizedTests: XCTestCase {
         (0..<iterations).forEach { _ in
             group.enter()
             DispatchQueue.global().async {
-                lock.tryLocked { counter.increment() }
+                _ = lock.tryLocked { counter.increment() }
                 group.leave()
             }
         }
@@ -171,7 +169,7 @@ final class SynchronizedTests: XCTestCase {
         (0..<iterations).forEach { _ in
             group.enter()
             DispatchQueue.global().async {
-                lock.tryLocked { counter.increment() }
+                _ = lock.tryLocked { counter.increment() }
                 group.leave()
             }
         }
