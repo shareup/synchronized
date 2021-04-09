@@ -1,5 +1,4 @@
 // swift-tools-version:5.3
-
 import PackageDescription
 
 let package = Package(
@@ -10,6 +9,10 @@ let package = Package(
     products: [
         .library(
             name: "Synchronized",
+            targets: ["Synchronized"]),
+        .library(
+            name: "SynchronizedDynamic",
+            type: .dynamic,
             targets: ["Synchronized"]),
     ],
     dependencies: [ ],
