@@ -10,10 +10,6 @@ let package = Package(
         .library(
             name: "Synchronized",
             targets: ["Synchronized"]),
-        .library(
-            name: "SynchronizedDynamic",
-            type: .dynamic,
-            targets: ["Synchronized"]),
     ],
     dependencies: [ ],
     targets: [
