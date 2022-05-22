@@ -1,10 +1,9 @@
-name: ci
-
 on: push
 
 jobs:
   test:
-     runs-on: macos-12
+    runs-on: macos-12
+    
     steps:
       - uses: actions/checkout@v2
       # Available environments: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md#xcode
