@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.5
 import PackageDescription
 
 let package = Package(
@@ -9,15 +9,18 @@ let package = Package(
     products: [
         .library(
             name: "Synchronized",
-            targets: ["Synchronized"]),
+            targets: ["Synchronized"]
+        ),
     ],
-    dependencies: [ ],
+    dependencies: [],
     targets: [
         .target(
             name: "Synchronized",
-            dependencies: []),
+            dependencies: []
+        ),
         .testTarget(
             name: "SynchronizedTests",
-            dependencies: ["Synchronized"]),
+            dependencies: ["Synchronized"]
+        ),
     ]
 )

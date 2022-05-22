@@ -1,13 +1,12 @@
-name: ci
 on: push
+
 jobs:
   test:
-    runs-on: macOS-10.15
+    runs-on: macos-12
+    
     steps:
-      - uses: actions/checkout@v1
-      - name: Switch Xcode to 12.0.1
-        run: xcversion select 12.0.1
-      - name: Build
-        run: swift build -v
-      - name: Test
-        run: swift test -v
+      - uses: actions/checkout@v2
+      # Available environments: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md#xcode
+      - run: xcversion select 13.4
+      - run: swift package resolve
+      - run: swift test --skip-update
