@@ -1,11 +1,13 @@
 name: ci
+
 on: push
+
 jobs:
   test:
-     runs-on: macos-latest
+     runs-on: macos-12
     steps:
-      - uses: actions/checkout@v1
-      - name: Build
-        run: swift build -v
-      - name: Test
-        run: swift test -v
+      - uses: actions/checkout@v2
+      # Available environments: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md#xcode
+      - xcversion select 13.3.1
+      - run: swift build -v
+      - run: swift test -v
