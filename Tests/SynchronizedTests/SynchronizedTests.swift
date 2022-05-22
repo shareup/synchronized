@@ -16,6 +16,13 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(1, output)
     }
 
+    func testReturnsValueFromLocked() {
+        let input = Locked(0)
+        let output: Int = input.access { $0 += 1; return $0 }
+        XCTAssertEqual(1, output)
+        XCTAssertEqual(1, input.access { $0 })
+    }
+
     enum TestError: Error {
         case locked
     }
@@ -68,6 +75,24 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertEqual(iterations, counter.currentValue)
     }
 
+    func testCounterWithLocked() {
+        let iterations = 100_000
+        let counter = Locked<Counter>(Counter())
+        let group = DispatchGroup()
+
+        (0 ..< iterations).forEach { _ in
+            group.enter()
+            DispatchQueue.global().async {
+                counter.access { $0.increment() }
+                group.leave()
+            }
+        }
+
+        group.wait()
+
+        XCTAssertEqual(iterations, counter.access { $0.currentValue })
+    }
+
     func testCounterWithLockWithDifferentQoS() {
         let iterations = 100_000
         let counter = Counter()
@@ -108,6 +133,26 @@ final class SynchronizedTests: XCTestCase {
         group.wait()
 
         XCTAssertEqual(iterations, counter.currentValue)
+    }
+
+    func testCounterWithLockedWithDifferentQoS() {
+        let iterations = 100_000
+        let counter = Locked(Counter())
+        let group = DispatchGroup()
+
+        (0 ..< iterations).forEach { _ in
+            group.enter()
+
+            let qos: DispatchQoS.QoSClass = Bool.random() ? .userInteractive : .background
+            DispatchQueue.global(qos: qos).async {
+                counter.access { $0.increment() }
+                group.leave()
+            }
+        }
+
+        group.wait()
+
+        XCTAssertEqual(iterations, counter.access { $0.currentValue })
     }
 
     func testSuccessfulTryLockedWithLock() {
@@ -369,42 +414,4 @@ final class SynchronizedTests: XCTestCase {
             XCTAssertEqual(iterations, third.currentValue)
         }
     }
-
-    static var allTests = [
-        ("testReturnsValueFromLock", testReturnsValueFromLock),
-        ("testReturnsValueFromRecursiveLock", testReturnsValueFromRecursiveLock),
-        ("testThrowsErrorFromLock", testThrowsErrorFromLock),
-        ("testThrowsErrorFromRecursiveLock", testThrowsErrorFromRecursiveLock),
-        ("testCounterWithLock", testCounterWithLock),
-        ("testCounterWithRecursiveLock", testCounterWithRecursiveLock),
-        ("testCounterWithLockWithDifferentQoS", testCounterWithLockWithDifferentQoS),
-        (
-            "testCounterWithRecursiveLockWithDifferentQoS",
-            testCounterWithRecursiveLockWithDifferentQoS
-        ),
-        ("testSuccessfulTryLockedWithLock", testSuccessfulTryLockedWithLock),
-        ("testSuccessfulTryLockedWithRecursiveLock", testSuccessfulTryLockedWithRecursiveLock),
-        (
-            "testUnsuccessfulRecursiveTryLockedWithLock",
-            testUnsuccessfulRecursiveTryLockedWithLock
-        ),
-        ("testUnsuccessfulTryLockedWithLock", testUnsuccessfulTryLockedWithLock),
-        (
-            "testUnsuccessfulTryLockedWithRecursiveLock",
-            testUnsuccessfulTryLockedWithRecursiveLock
-        ),
-        ("testMultipleCountersWithLock", testMultipleCountersWithLock),
-        ("testMultipleCountersWithRecursiveLock", testMultipleCountersWithRecursiveLock),
-        (
-            "testMultipleCountersWithLockWithDifferentQoS",
-            testMultipleCountersWithLockWithDifferentQoS
-        ),
-        (
-            "testMultipleCountersWithRecursiveLockWithDifferentQoS",
-            testMultipleCountersWithRecursiveLockWithDifferentQoS
-        ),
-        ("testRecursiveCalls", testRecursiveCalls),
-        ("testPerformanceOfLock", testPerformanceOfLock),
-        ("testPerformanceOfRecursiveLock", testPerformanceOfRecursiveLock),
-    ]
 }
