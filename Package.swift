@@ -9,15 +9,18 @@ let package = Package(
     products: [
         .library(
             name: "Synchronized",
-            targets: ["Synchronized"]),
+            targets: ["Synchronized"]
+        ),
     ],
-    dependencies: [ ],
+    dependencies: [],
     targets: [
         .target(
             name: "Synchronized",
-            dependencies: []),
+            dependencies: []
+        ),
         .testTarget(
             name: "SynchronizedTests",
-            dependencies: ["Synchronized"]),
+            dependencies: ["Synchronized"]
+        ),
     ]
 )
