@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Locked<Element: Sendable>: @unchecked Sendable {
+public struct Locked<Element> {
     private final class Lock: ManagedBuffer<Element, os_unfair_lock> {
         deinit {
             withUnsafeMutablePointerToElements { lock in
@@ -13,7 +13,9 @@ public struct Locked<Element: Sendable>: @unchecked Sendable {
 
     public init(_ element: Element) {
         buffer = Lock.create(minimumCapacity: 1) { buffer in
-            buffer.withUnsafeMutablePointerToElements { $0.initialize(to: os_unfair_lock()) }
+            buffer.withUnsafeMutablePointerToElements {
+                $0.initialize(to: os_unfair_lock())
+            }
             return element
         }
     }
@@ -26,3 +28,5 @@ public struct Locked<Element: Sendable>: @unchecked Sendable {
         }
     }
 }
+
+extension Locked: @unchecked Sendable where Element: Sendable {}
