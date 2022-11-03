@@ -37,6 +37,17 @@ final class SynchronizedTests: XCTestCase {
         XCTAssertThrowsError(try lock.locked { throw TestError.locked })
     }
 
+    func testLockedElementDoesNotNeedToBeSendable() {
+        class ThreadUnsafe {
+            var name: String
+            init(name: String) { self.name = name }
+        }
+
+        let unsafe = Locked(ThreadUnsafe(name: "something"))
+        unsafe.access { $0.name = "else" }
+        XCTAssertEqual("else", unsafe.access { $0.name })
+    }
+
     func testCounterWithLock() {
         let iterations = 100_000
         let counter = Counter()
