@@ -1,10 +1,10 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.7
 import PackageDescription
 
 let package = Package(
     name: "Synchronized",
     platforms: [
-        .macOS(.v10_15), .iOS(.v13), .tvOS(.v13), .watchOS(.v5),
+        .macOS(.v11), .iOS(.v14), .tvOS(.v14), .watchOS(.v7),
     ],
     products: [
         .library(
