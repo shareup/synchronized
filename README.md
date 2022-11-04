@@ -37,7 +37,7 @@ To use Synchronized with the Swift Package Manager, add a dependency to your Pac
 ```swift
 let package = Package(
   dependencies: [
-    .package(url: "https://github.com/shareup/synchronized.git", .upToNextMajor(from: "3.1.0"))
+    .package(url: "https://github.com/shareup/synchronized.git", .upToNextMajor(from: "4.0.0"))
   ]
 )
 ```
