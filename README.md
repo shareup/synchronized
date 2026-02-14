@@ -43,3 +43,7 @@ let package = Package(
 ```
 
 _Linux is not currently supported_
+
+## License
+
+MIT
